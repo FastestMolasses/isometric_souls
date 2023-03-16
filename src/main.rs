@@ -4,11 +4,9 @@ use std::time::Duration;
 
 const CAMERA_SMOOTHING_FACTOR: f32 = 0.2;
 
-// Components
 #[derive(Component)]
 struct Character {
     speed: f32,
-    dash_cooldown: Timer,
     dash_duration: Timer,
     dashing: bool,
     last_move_direction: Vec2,
@@ -23,12 +21,9 @@ struct Health {
 #[derive(Component, Default)]
 struct AttackState {
     attack_chain: Vec<f32>,
-    current_attack: usize,
     attack_timer: Timer,
-    attack_chain_timer: Timer,
-    last_attack_time: f64,
+    current_attack: usize,
     attack_pressed: bool,
-    can_attack: bool,
 }
 
 #[derive(Component)]
@@ -79,14 +74,13 @@ fn setup(
         },
         Character {
             speed: 300.0,
-            dash_cooldown: Timer::from_seconds(0.4, TimerMode::Repeating),
             dash_duration: Timer::from_seconds(0.25, TimerMode::Repeating),
             dashing: false,
             last_move_direction: Vec2::new(1.0, 0.0),
         },
         AttackState {
             attack_chain: vec![0.5, 0.4, 0.6], // Attack durations for each attack in the chain
-            attack_timer: Timer::from_seconds(0.0, TimerMode::Repeating),
+            attack_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
             ..Default::default()
         },
         Health {
@@ -152,27 +146,27 @@ fn input_handling_system(
 
     input_state.move_direction = move_direction;
     input_state.attack = keyboard_input.pressed(KeyCode::Space);
-    input_state.dash = keyboard_input.pressed(KeyCode::LShift);
+    input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
 }
 
 fn character_controller_system(
     time: Res<Time>,
     input_state: Res<InputState>,
-    mut query: Query<(&mut Character, &mut Transform, &mut AttackState)>,
+    mut query: Query<(&mut Character, &mut Transform)>,
 ) {
-    for (mut character, mut transform, mut attack_state) in query.iter_mut() {
+    for (mut character, mut transform) in query.iter_mut() {
+        // 8-directional movement
         if !character.dashing {
-            let move_direction = input_state.move_direction.normalize_or_zero();
-            transform.translation +=
-                move_direction.extend(0.0) * character.speed * time.delta_seconds();
             if input_state.move_direction != Vec2::ZERO {
+                let move_direction = input_state.move_direction.normalize();
+                transform.translation +=
+                    move_direction.extend(0.0) * character.speed * time.delta_seconds();
                 character.last_move_direction = move_direction;
             }
         }
 
         // Dash
-        character.dash_cooldown.tick(time.delta());
-        if input_state.dash && character.dash_cooldown.finished() && !character.dashing {
+        if input_state.dash && !character.dashing {
             character.dashing = true;
             character.dash_duration.reset();
             println!("Start dashing!");
@@ -182,14 +176,17 @@ fn character_controller_system(
             character.dash_duration.tick(time.delta());
             if character.dash_duration.finished() {
                 character.dashing = false;
-                character.dash_cooldown.reset();
                 println!("End dashing!");
             } else {
-                // Use the last_move_direction for dashing
-                let dash_direction = character.last_move_direction;
+                let move_direction = if input_state.move_direction != Vec2::ZERO {
+                    input_state.move_direction.normalize()
+                } else {
+                    -character.last_move_direction // Dash in the opposite direction
+                };
+
                 let dash_speed = character.speed * 3.0;
                 transform.translation +=
-                    dash_direction.extend(0.0) * dash_speed * time.delta_seconds();
+                    move_direction.extend(0.0) * dash_speed * time.delta_seconds();
             }
         }
     }
@@ -228,46 +225,38 @@ fn player_death_system(query: Query<(Entity, &Health), With<Player>>, mut comman
 fn attack_handling_system(
     time: Res<Time>,
     input_state: Res<InputState>,
-    mut query: Query<(&mut Character, &mut AttackState)>,
+    mut query: Query<(&mut AttackState, &Character)>,
 ) {
-    for (mut character, mut attack_state) in query.iter_mut() {
-        if input_state.attack && !character.dashing {
-            if !attack_state.attack_pressed {
-                attack_state.attack_pressed = true;
-
-                if attack_state.can_attack && !attack_state.attack_chain.is_empty() {
-                    attack_state.current_attack =
-                        (attack_state.current_attack + 1) % attack_state.attack_chain.len();
-                    println!("Attack {}!", attack_state.current_attack + 1);
-                    let attack_duration = attack_state.attack_chain[attack_state.current_attack];
-                    attack_state
-                        .attack_timer
-                        .set_duration(Duration::from_secs_f32(attack_duration));
-                    attack_state.attack_timer.reset();
-                    attack_state.last_attack_time = time.elapsed_seconds_f64();
-                    attack_state.can_attack = false;
-
-                    // Reset attack chain timer
-                    attack_state
-                        .attack_chain_timer
-                        .set_duration(Duration::from_secs_f32(0.5));
-                    attack_state.attack_chain_timer.reset();
-                }
-            }
-        } else {
-            attack_state.attack_pressed = false;
+    for (mut attack_state, character) in query.iter_mut() {
+        if character.dashing {
+            continue;
         }
 
-        // Update attack timer and attack chain timer
         attack_state.attack_timer.tick(time.delta());
-        attack_state.attack_chain_timer.tick(time.delta());
 
-        if attack_state.attack_timer.finished() {
-            attack_state.can_attack = true;
-        }
+        if input_state.attack && !attack_state.attack_pressed {
+            attack_state.attack_pressed = true;
 
-        if attack_state.attack_chain_timer.finished() {
-            attack_state.current_attack = 0;
+            if attack_state.current_attack == 0 || attack_state.attack_timer.finished() {
+                // Start the first attack or chain the next attack
+                attack_state.current_attack =
+                    (attack_state.current_attack) % attack_state.attack_chain.len() + 1;
+
+                let current_attack_duration =
+                    attack_state.attack_chain[attack_state.current_attack - 1];
+                attack_state
+                    .attack_timer
+                    .set_duration(Duration::from_secs_f32(current_attack_duration));
+                attack_state.attack_timer.reset();
+
+                println!("Attack {}!", attack_state.current_attack);
+            }
+        } else if !input_state.attack {
+            attack_state.attack_pressed = false;
+            if attack_state.attack_timer.finished() {
+                // If the attack button isn't pressed and the timer has finished, reset the current attack
+                attack_state.current_attack = 0;
+            }
         }
     }
 }
