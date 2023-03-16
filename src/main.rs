@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use std::collections::HashMap;
 use std::time::Duration;
 
 const CAMERA_SMOOTHING_FACTOR: f32 = 0.2;
@@ -23,11 +24,28 @@ struct AttackState {
     attack_chain: Vec<f32>,
     attack_timer: Timer,
     current_attack: usize,
-    attack_pressed: bool,
 }
 
 #[derive(Component)]
 struct Player;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Direction {
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+}
+
+// Resources
+#[derive(Default)]
+struct DirectionAtlasHandles(HashMap<Direction, Handle<TextureAtlas>>);
+// Implement the Resource trait for the newtype
+impl Resource for DirectionAtlasHandles {}
 
 // Input resources
 #[derive(Resource, Default)]
@@ -41,6 +59,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .init_resource::<InputState>()
+        .init_resource::<DirectionAtlasHandles>()
         .add_system(input_handling_system)
         .add_system(character_controller_system)
         .add_system(camera_follow_system)
@@ -54,13 +73,25 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut direction_atlas_handles: ResMut<DirectionAtlasHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let texture_handle = asset_server.load("steel_armor.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(128.0, 128.0), 32, 8, None, None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    // Load the directional player textures
+    let texture_handles = [
+        ("HeroEast.png", Direction::East),
+        ("HeroNorth.png", Direction::North),
+        ("HeroNorthEast.png", Direction::NorthEast),
+        ("HeroSouth.png", Direction::South),
+        ("HeroSouthEast.png", Direction::SouthEast),
+    ];
+    for (file_name, direction) in &texture_handles {
+        let texture_handle = asset_server.load(*file_name);
+        let atlas =
+            TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 10, 12, None, None);
+        let atlas_handle = texture_atlases.add(atlas);
+        direction_atlas_handles.0.insert(*direction, atlas_handle);
+    }
 
     commands.spawn(Camera2dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
@@ -68,7 +99,11 @@ fn setup(
     });
     commands.spawn((
         SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
+            texture_atlas: direction_atlas_handles
+                .0
+                .get(&Direction::East)
+                .unwrap()
+                .clone(),
             transform: Transform::from_scale(Vec3::splat(2.0)),
             ..default()
         },
@@ -152,9 +187,16 @@ fn input_handling_system(
 fn character_controller_system(
     time: Res<Time>,
     input_state: Res<InputState>,
-    mut query: Query<(&mut Character, &mut Transform)>,
+    direction_atlas_handles: ResMut<DirectionAtlasHandles>,
+    mut query: Query<(
+        &mut Character,
+        &mut Transform,
+        &mut Handle<TextureAtlas>,
+        &mut TextureAtlasSprite,
+    )>,
 ) {
-    for (mut character, mut transform) in query.iter_mut() {
+    for (mut character, mut transform, mut atlas, mut sprite) in query.iter_mut()
+    {
         // 8-directional movement
         if !character.dashing {
             if input_state.move_direction != Vec2::ZERO {
@@ -162,6 +204,16 @@ fn character_controller_system(
                 transform.translation +=
                     move_direction.extend(0.0) * character.speed * time.delta_seconds();
                 character.last_move_direction = move_direction;
+
+                let direction = vec2_to_direction(move_direction);
+                // Flip the sprite based on the current direction
+                sprite.flip_x = matches!(direction, Direction::SouthWest | Direction::West | Direction::NorthWest);
+
+                let direction = direction_to_texture_atlas_direction(move_direction);
+                // Update the texture atlas based on the character's direction
+                if let Some(atlas_handle) = direction_atlas_handles.0.get(&direction) {
+                    *atlas = atlas_handle.clone();
+                }
             }
         }
 
@@ -181,10 +233,10 @@ fn character_controller_system(
                 let move_direction = if input_state.move_direction != Vec2::ZERO {
                     input_state.move_direction.normalize()
                 } else {
-                    -character.last_move_direction // Dash in the opposite direction
+                    character.last_move_direction
                 };
 
-                let dash_speed = character.speed * 3.0;
+                let dash_speed = character.speed * 2.5;
                 transform.translation +=
                     move_direction.extend(0.0) * dash_speed * time.delta_seconds();
             }
@@ -225,6 +277,7 @@ fn player_death_system(query: Query<(Entity, &Health), With<Player>>, mut comman
 fn attack_handling_system(
     time: Res<Time>,
     input_state: Res<InputState>,
+    keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&mut AttackState, &Character)>,
 ) {
     for (mut attack_state, character) in query.iter_mut() {
@@ -234,9 +287,7 @@ fn attack_handling_system(
 
         attack_state.attack_timer.tick(time.delta());
 
-        if input_state.attack && !attack_state.attack_pressed {
-            attack_state.attack_pressed = true;
-
+        if keyboard_input.just_pressed(KeyCode::Space) {
             if attack_state.current_attack == 0 || attack_state.attack_timer.finished() {
                 // Start the first attack or chain the next attack
                 attack_state.current_attack =
@@ -252,11 +303,75 @@ fn attack_handling_system(
                 println!("Attack {}!", attack_state.current_attack);
             }
         } else if !input_state.attack {
-            attack_state.attack_pressed = false;
             if attack_state.attack_timer.finished() {
                 // If the attack button isn't pressed and the timer has finished, reset the current attack
                 attack_state.current_attack = 0;
             }
         }
+    }
+}
+
+fn vec2_to_direction(vector: Vec2) -> Direction {
+    match vector.try_normalize() {
+        Some(normalized_vector) => {
+            let x = normalized_vector.x;
+            let y = normalized_vector.y;
+
+            if y >= 0.5 && x.abs() <= 0.5 {
+                Direction::North
+            } else if y <= -0.5 && x.abs() <= 0.5 {
+                Direction::South
+            } else if x >= 0.5 && y.abs() <= 0.5 {
+                Direction::East
+            } else if x <= -0.5 && y.abs() <= 0.5 {
+                Direction::West
+            } else if x >= 0.5 && y >= 0.5 {
+                Direction::NorthEast
+            } else if x <= -0.5 && y >= 0.5 {
+                Direction::NorthWest
+            } else if x >= 0.5 && y <= -0.5 {
+                Direction::SouthEast
+            } else if x <= -0.5 && y <= -0.5 {
+                Direction::SouthWest
+            } else {
+                Direction::East
+            }
+        }
+        None => Direction::East,
+    }
+}
+
+/// Because the sprite needs to be flipped for NW, W, and SW, this function will
+/// return the opposite direction for these directions so that the sprite can be flipped properly
+fn direction_to_texture_atlas_direction(vector: Vec2) -> Direction {
+    match vector.try_normalize() {
+        Some(normalized_vector) => {
+            let x = normalized_vector.x;
+            let y = normalized_vector.y;
+
+            if y >= 0.5 && x.abs() <= 0.5 {
+                Direction::North
+            } else if y <= -0.5 && x.abs() <= 0.5 {
+                Direction::South
+            } else if x >= 0.5 && y.abs() <= 0.5 {
+                Direction::East
+            } else if x <= -0.5 && y.abs() <= 0.5 {
+                // If this is returned, it needs to be flipped
+                Direction::East
+            } else if x >= 0.5 && y >= 0.5 {
+                Direction::NorthEast
+            } else if x <= -0.5 && y >= 0.5 {
+                // If this is returned, it needs to be flipped
+                Direction::NorthEast
+            } else if x >= 0.5 && y <= -0.5 {
+                Direction::SouthEast
+            } else if x <= -0.5 && y <= -0.5 {
+                // If this is returned, it needs to be flipped
+                Direction::SouthEast
+            } else {
+                Direction::East
+            }
+        }
+        None => Direction::East,
     }
 }
