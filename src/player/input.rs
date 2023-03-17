@@ -1,4 +1,4 @@
-use crate::animation::{AnimationSpriteSheet, AnimationSpriteSheetTrait};
+use crate::animation::AnimationSpriteSheet;
 use crate::player::animation::{DirectionAtlasHandles, PlayerAnimation};
 use crate::util::{direction_to_texture_atlas_direction, vec2_to_direction, Direction};
 use bevy::prelude::*;
@@ -92,11 +92,14 @@ pub fn input_handling_system(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     mut input_state: ResMut<InputState>,
-    mut query: Query<(&mut AnimationSpriteSheet<PlayerAnimation>, &mut TextureAtlasSprite)>,
+    mut query: Query<(
+        &mut AnimationSpriteSheet<PlayerAnimation>,
+        &mut TextureAtlasSprite,
+    )>,
 ) {
     for (mut sprite_sheet, mut sprite) in query.iter_mut() {
         sprite_sheet.update_state(time.delta());
-        sprite.index = sprite_sheet.state.frame_index() * sprite_sheet.column_count;
+        sprite.index = sprite_sheet.state.frame_index();
 
         let mut move_direction = Vec2::ZERO;
 
@@ -111,6 +114,12 @@ pub fn input_handling_system(
         }
         if keyboard_input.pressed(KeyCode::D) {
             move_direction.x += 1.0;
+        }
+
+        if move_direction == Vec2::ZERO {
+            sprite_sheet.set_animation(PlayerAnimation::Idle);
+        } else {
+            sprite_sheet.set_animation(PlayerAnimation::Run);
         }
 
         input_state.move_direction = move_direction;

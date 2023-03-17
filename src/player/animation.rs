@@ -1,4 +1,4 @@
-use crate::animation::AnimationSpriteSheet;
+use crate::animation::{AnimationSpriteSheet, AnimationLookup};
 use crate::util::Direction;
 use benimator::Animation;
 use benimator::FrameRate;
@@ -29,12 +29,12 @@ pub struct DirectionAtlasHandles(pub HashMap<Direction, Handle<TextureAtlas>>);
 // Implement the Resource trait for the newtype
 impl Resource for DirectionAtlasHandles {}
 
-impl AnimationSpriteSheet<PlayerAnimation> {
+impl AnimationLookup<PlayerAnimation> for PlayerAnimation {
     fn get_animation(anim_enum: &PlayerAnimation) -> Animation {
         match anim_enum {
-            PlayerAnimation::Idle => Animation::from_indices(0..=6, FrameRate::from_fps(12.0)),
-            PlayerAnimation::Run => Animation::from_indices(20..=26, FrameRate::from_fps(12.0)),
-            PlayerAnimation::RunStop => Animation::from_indices(30..=34, FrameRate::from_fps(12.0)),
+            PlayerAnimation::Idle => Animation::from_indices(0..=5, FrameRate::from_fps(12.0)),
+            PlayerAnimation::Run => Animation::from_indices(20..=25, FrameRate::from_fps(12.0)),
+            PlayerAnimation::RunStop => Animation::from_indices(30..=33, FrameRate::from_fps(12.0)),
             PlayerAnimation::DashAttack => {
                 Animation::from_indices(80..=89, FrameRate::from_fps(12.0)).once()
             }
@@ -51,9 +51,5 @@ impl AnimationSpriteSheet<PlayerAnimation> {
                 Animation::from_indices(120..=126, FrameRate::from_fps(12.0)).once()
             }
         }
-    }
-
-    fn get_current_animation(&self) -> Animation {
-        Self::get_animation(&self.current_animation)
     }
 }
