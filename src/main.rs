@@ -70,6 +70,7 @@ fn setup(
             ..Default::default()
         },
         animation::AnimationSpriteSheet::<player::animation::PlayerAnimation> {
+            column_count: 10,
             ..Default::default()
         },
         Health {

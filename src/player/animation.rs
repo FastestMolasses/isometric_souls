@@ -52,4 +52,8 @@ impl AnimationSpriteSheet<PlayerAnimation> {
             }
         }
     }
+
+    fn get_current_animation(&self) -> Animation {
+        Self::get_animation(&self.current_animation)
+    }
 }

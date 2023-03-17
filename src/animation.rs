@@ -1,19 +1,21 @@
+use benimator::FrameRate;
 use bevy::prelude::*;
 use std::hash::Hash;
 use std::time::Duration;
 
 #[derive(Component, Default)]
 pub struct AnimationSpriteSheet<T> {
-    pub current_animation: T,  // T should be an enum of all the animations
+    pub current_animation: T, // T should be an enum of all the animations
 
-    pub row_length: usize,
-    pub state: benimator::State,
     pub locked: bool,
+    pub column_count: usize,
+    pub state: benimator::State,
 }
 
 pub trait AnimationSpriteSheetTrait<T> {
     fn set_animation(&mut self, animation: T);
-    fn update_state(&mut self, animation: benimator::Animation, duration: Duration);
+    fn get_current_animation(&self) -> benimator::Animation;
+    fn update_state(&mut self, duration: Duration);
     fn get_animation(anim_enum: &T) -> benimator::Animation;
 }
 
@@ -29,12 +31,18 @@ impl<T: Default + Eq + Hash> AnimationSpriteSheetTrait<T> for AnimationSpriteShe
         self.state.reset();
     }
 
+    /// Looks up the current animation based on the enum provided
+    fn get_current_animation(&self) -> benimator::Animation {
+        Self::get_animation(&self.current_animation)
+    }
+
     /// Update the animation state
-    fn update_state(&mut self, animation: benimator::Animation, duration: Duration) {
-        self.state.update(&animation, duration);
+    fn update_state(&mut self, duration: Duration) {
+        self.state.update(&self.get_current_animation(), duration);
     }
 
     fn get_animation(_: &T) -> benimator::Animation {
-        unimplemented!()
+        // unimplemented!()
+        benimator::Animation::from_indices(12..20, FrameRate::from_fps(12.0))
     }
 }

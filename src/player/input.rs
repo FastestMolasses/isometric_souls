@@ -1,7 +1,8 @@
+use crate::animation::{AnimationSpriteSheet, AnimationSpriteSheetTrait};
+use crate::player::animation::{DirectionAtlasHandles, PlayerAnimation};
+use crate::util::{direction_to_texture_atlas_direction, vec2_to_direction, Direction};
 use bevy::prelude::*;
 use std::time::Duration;
-use crate::util::{Direction, vec2_to_direction, direction_to_texture_atlas_direction};
-use crate::player::animation::DirectionAtlasHandles;
 
 #[derive(Resource, Default)]
 pub struct InputState {
@@ -88,32 +89,34 @@ pub fn character_controller_system(
 }
 
 pub fn input_handling_system(
+    time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     mut input_state: ResMut<InputState>,
-    mut query: Query<&mut TextureAtlasSprite>,
+    mut query: Query<(&mut AnimationSpriteSheet<PlayerAnimation>, &mut TextureAtlasSprite)>,
 ) {
-    for mut sprite in &mut query {
-        sprite.index = 1;
-    }
+    for (mut sprite_sheet, mut sprite) in query.iter_mut() {
+        sprite_sheet.update_state(time.delta());
+        sprite.index = sprite_sheet.state.frame_index() * sprite_sheet.column_count;
 
-    let mut move_direction = Vec2::ZERO;
+        let mut move_direction = Vec2::ZERO;
 
-    if keyboard_input.pressed(KeyCode::W) {
-        move_direction.y += 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::S) {
-        move_direction.y -= 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::A) {
-        move_direction.x -= 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::D) {
-        move_direction.x += 1.0;
-    }
+        if keyboard_input.pressed(KeyCode::W) {
+            move_direction.y += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::S) {
+            move_direction.y -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::A) {
+            move_direction.x -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::D) {
+            move_direction.x += 1.0;
+        }
 
-    input_state.move_direction = move_direction;
-    input_state.attack = keyboard_input.pressed(KeyCode::Space);
-    input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
+        input_state.move_direction = move_direction;
+        input_state.attack = keyboard_input.pressed(KeyCode::Space);
+        input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
+    }
 }
 
 pub fn attack_handling_system(
