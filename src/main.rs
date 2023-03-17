@@ -58,9 +58,8 @@ fn setup(
             transform: Transform::from_scale(Vec3::splat(2.0)),
             ..default()
         },
-        player::input::Character {
+        player::input::CharacterState {
             speed: 300.0,
-            dash_duration: Timer::from_seconds(0.25, TimerMode::Repeating),
             dashing: false,
             last_move_direction: Vec2::new(1.0, 0.0),
         },

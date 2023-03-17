@@ -17,9 +17,8 @@ pub struct AttackState {
 }
 
 #[derive(Component)]
-pub struct Character {
+pub struct CharacterState {
     pub speed: f32,
-    pub dash_duration: Timer,
     pub dashing: bool,
     pub last_move_direction: Vec2,
 }
@@ -29,14 +28,15 @@ pub fn character_controller_system(
     input_state: Res<InputState>,
     direction_atlas_handles: ResMut<DirectionAtlasHandles>,
     mut query: Query<(
-        &mut Character,
+        &mut CharacterState,
         &mut AnimationSpriteSheet<PlayerAnimation>,
         &mut Transform,
         &mut Handle<TextureAtlas>,
         &mut TextureAtlasSprite,
     )>,
 ) {
-    for (mut character, mut sprite_sheet, mut transform, mut atlas, mut sprite) in query.iter_mut() {
+    for (mut character, mut sprite_sheet, mut transform, mut atlas, mut sprite) in query.iter_mut()
+    {
         // 8-directional movement
         if !character.dashing {
             if input_state.move_direction != Vec2::ZERO {
@@ -63,20 +63,18 @@ pub fn character_controller_system(
         // Dash
         if input_state.dash && !character.dashing {
             character.dashing = true;
-            // character.dash_duration.reset();
             println!("Start dashing!");
             sprite_sheet.set_animation(PlayerAnimation::Dash);
         }
 
         if character.dashing {
-            // character.dash_duration.tick(time.delta());
-            if sprite_sheet.state.is_ended() {
+            if !sprite_sheet.locked {
                 character.dashing = false;
                 println!("End dashing!");
             } else {
                 let move_direction = character.last_move_direction.normalize_or_zero();
 
-                let dash_speed = character.speed * 2.5;
+                let dash_speed = character.speed * 2.25;
                 transform.translation +=
                     move_direction.extend(0.0) * dash_speed * time.delta_seconds();
             }
@@ -125,10 +123,8 @@ pub fn input_handling_system(
         }
 
         if move_direction == Vec2::ZERO {
-            println!("Set animation idle");
             sprite_sheet.set_animation(PlayerAnimation::Idle);
         } else {
-            println!("Set animation run");
             sprite_sheet.set_animation(PlayerAnimation::Run);
         }
 
