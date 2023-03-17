@@ -1,17 +1,18 @@
-use crate::animation::{AnimationSpriteSheet, AnimationLookup};
+use crate::animation::{
+    sprite::{AnimationLookup, AnimationSpriteSheet},
+    Animation, FrameRate,
+};
 use crate::util::Direction;
-use benimator::Animation;
-use benimator::FrameRate;
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PlayerAnimation {
     Idle,
     Run,
     RunStop,
+    Dash,
     DashAttack,
-    Roll,
     Attack1,
     Attack2,
     Attack3,
@@ -38,17 +39,17 @@ impl AnimationLookup<PlayerAnimation> for PlayerAnimation {
             PlayerAnimation::DashAttack => {
                 Animation::from_indices(80..=89, FrameRate::from_fps(12.0)).once()
             }
-            PlayerAnimation::Roll => {
-                Animation::from_indices(90..=99, FrameRate::from_fps(12.0)).once()
+            PlayerAnimation::Dash => {
+                Animation::from_indices(80..=89, FrameRate::from_fps(12.0)).once()
             }
             PlayerAnimation::Attack1 => {
-                Animation::from_indices(100..=105, FrameRate::from_fps(12.0)).once()
+                Animation::from_indices(90..=95, FrameRate::from_fps(12.0)).once()
             }
             PlayerAnimation::Attack2 => {
-                Animation::from_indices(110..=118, FrameRate::from_fps(12.0)).once()
+                Animation::from_indices(100..=108, FrameRate::from_fps(12.0)).once()
             }
             PlayerAnimation::Attack3 => {
-                Animation::from_indices(120..=126, FrameRate::from_fps(12.0)).once()
+                Animation::from_indices(110..=116, FrameRate::from_fps(12.0)).once()
             }
         }
     }

@@ -65,11 +65,10 @@ fn setup(
             last_move_direction: Vec2::new(1.0, 0.0),
         },
         player::input::AttackState {
-            attack_chain: vec![0.5, 0.4, 0.6], // Attack durations for each attack in the chain
             attack_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
             ..Default::default()
         },
-        animation::AnimationSpriteSheet::<player::animation::PlayerAnimation> {
+        animation::sprite::AnimationSpriteSheet::<player::animation::PlayerAnimation> {
             column_count: 10,
             ..Default::default()
         },
