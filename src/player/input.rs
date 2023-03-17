@@ -1,26 +1,13 @@
-use crate::util::{direction_to_texture_atlas_direction, vec2_to_direction, Direction};
 use bevy::prelude::*;
-use std::collections::HashMap;
 use std::time::Duration;
+use crate::util::{Direction, vec2_to_direction, direction_to_texture_atlas_direction};
+use crate::player::animation::DirectionAtlasHandles;
 
-pub struct PlayerPlugin;
-
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<InputState>()
-            .init_resource::<DirectionAtlasHandles>()
-            .add_system(character_controller_system)
-            .add_system(input_handling_system)
-            .add_system(attack_handling_system);
-    }
-}
-
-#[derive(Component)]
-pub struct Character {
-    pub speed: f32,
-    pub dash_duration: Timer,
-    pub dashing: bool,
-    pub last_move_direction: Vec2,
+#[derive(Resource, Default)]
+pub struct InputState {
+    move_direction: Vec2,
+    attack: bool,
+    dash: bool,
 }
 
 #[derive(Component, Default)]
@@ -31,23 +18,14 @@ pub struct AttackState {
 }
 
 #[derive(Component)]
-pub struct Player;
-
-// Input resources
-#[derive(Resource, Default)]
-struct InputState {
-    move_direction: Vec2,
-    attack: bool,
-    dash: bool,
+pub struct Character {
+    pub speed: f32,
+    pub dash_duration: Timer,
+    pub dashing: bool,
+    pub last_move_direction: Vec2,
 }
 
-// Resources
-#[derive(Default)]
-pub struct DirectionAtlasHandles(pub HashMap<Direction, Handle<TextureAtlas>>);
-// Implement the Resource trait for the newtype
-impl Resource for DirectionAtlasHandles {}
-
-fn character_controller_system(
+pub fn character_controller_system(
     time: Res<Time>,
     input_state: Res<InputState>,
     direction_atlas_handles: ResMut<DirectionAtlasHandles>,
@@ -109,7 +87,7 @@ fn character_controller_system(
     }
 }
 
-fn input_handling_system(
+pub fn input_handling_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut input_state: ResMut<InputState>,
     mut query: Query<&mut TextureAtlasSprite>,
@@ -138,7 +116,7 @@ fn input_handling_system(
     input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
 }
 
-fn attack_handling_system(
+pub fn attack_handling_system(
     time: Res<Time>,
     input_state: Res<InputState>,
     keyboard_input: Res<Input<KeyCode>>,

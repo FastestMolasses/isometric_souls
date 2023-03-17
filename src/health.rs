@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::player::Player;
+use bevy::prelude::*;
 
 pub struct HealthPlugin;
 

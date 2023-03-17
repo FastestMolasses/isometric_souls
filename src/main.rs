@@ -1,3 +1,4 @@
+mod animation;
 mod camera;
 mod health;
 mod player;
@@ -6,7 +7,7 @@ mod util;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use health::Health;
-use player::{Character, DirectionAtlasHandles, Player, AttackState};
+use player::animation::DirectionAtlasHandles;
 use util::Direction;
 
 fn main() {
@@ -57,13 +58,13 @@ fn setup(
             transform: Transform::from_scale(Vec3::splat(2.0)),
             ..default()
         },
-        Character {
+        player::input::Character {
             speed: 300.0,
             dash_duration: Timer::from_seconds(0.25, TimerMode::Repeating),
             dashing: false,
             last_move_direction: Vec2::new(1.0, 0.0),
         },
-        AttackState {
+        player::input::AttackState {
             attack_chain: vec![0.5, 0.4, 0.6], // Attack durations for each attack in the chain
             attack_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
             ..Default::default()
@@ -72,7 +73,7 @@ fn setup(
             current: 100,
             max: 100,
         },
-        Player,
+        player::Player,
     ));
 
     // Rectangle

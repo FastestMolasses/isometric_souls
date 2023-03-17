@@ -42,6 +42,8 @@ pub fn vec2_to_direction(vector: Vec2) -> Direction {
     }
 }
 
+/// NOTE: I expect to remove this function eventually because in the future I will need a spritesheet
+/// for all 8 directions instead of relying on flipping the sprite.
 /// Because the sprite needs to be flipped for NW, W, and SW, this function will
 /// return the opposite direction for these directions so that the sprite can be flipped properly
 pub fn direction_to_texture_atlas_direction(vector: Vec2) -> Direction {

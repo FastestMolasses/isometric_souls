@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::player::Player;
+use bevy::prelude::*;
 
 const CAMERA_SMOOTHING_FACTOR: f32 = 0.2;
 
@@ -13,9 +13,9 @@ impl Plugin for CameraPlugin {
 
 fn camera_follow_system(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-    mut query: Query<&Transform, (With<Player>, Without<Camera>)>,
+    mut player_query: Query<&Transform, (With<Player>, Without<Camera>)>,
 ) {
-    for player_transform in query.iter_mut() {
+    for player_transform in player_query.iter_mut() {
         for mut camera_transform in camera_query.iter_mut() {
             // Use lerp for camera smoothing
             camera_transform.translation.x = camera_transform.translation.x
