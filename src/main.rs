@@ -61,10 +61,10 @@ fn setup(
         player::input::CharacterState {
             speed: 300.0,
             dashing: false,
+            attacking: false,
             last_move_direction: Vec2::new(1.0, 0.0),
         },
         player::input::AttackState {
-            attack_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
             ..Default::default()
         },
         animation::sprite::AnimationSpriteSheet::<player::animation::PlayerAnimation> {

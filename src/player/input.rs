@@ -12,7 +12,6 @@ pub struct InputState {
 
 #[derive(Component, Default)]
 pub struct AttackState {
-    pub attack_timer: Timer,
     pub current_attack: usize,
 }
 
@@ -20,6 +19,7 @@ pub struct AttackState {
 pub struct CharacterState {
     pub speed: f32,
     pub dashing: bool,
+    pub attacking: bool,
     pub last_move_direction: Vec2,
 }
 
@@ -38,7 +38,7 @@ pub fn character_controller_system(
     for (mut character, mut sprite_sheet, mut transform, mut atlas, mut sprite) in query.iter_mut()
     {
         // 8-directional movement
-        if !character.dashing {
+        if !character.dashing && !character.attacking{
             if input_state.move_direction != Vec2::ZERO {
                 let move_direction = input_state.move_direction.normalize();
                 transform.translation +=
@@ -78,6 +78,16 @@ pub fn character_controller_system(
                 transform.translation +=
                     move_direction.extend(0.0) * dash_speed * time.delta_seconds();
             }
+        }
+
+        // Attack
+        if input_state.attack && !character.attacking {
+            character.attacking = true;
+            println!("Start attacking!");
+            sprite_sheet.set_animation(PlayerAnimation::Attack1);
+        } else if character.attacking && !sprite_sheet.locked {
+            character.attacking = false;
+            println!("End attacking!");
         }
     }
 }
@@ -129,7 +139,7 @@ pub fn input_handling_system(
         }
 
         input_state.move_direction = move_direction;
-        input_state.attack = keyboard_input.pressed(KeyCode::Space);
+        input_state.attack = keyboard_input.just_pressed(KeyCode::Space);
         input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
     }
 }
