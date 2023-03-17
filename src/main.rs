@@ -69,6 +69,9 @@ fn setup(
             attack_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
             ..Default::default()
         },
+        animation::AnimationSpriteSheet::<player::animation::PlayerAnimation> {
+            ..Default::default()
+        },
         Health {
             current: 100,
             max: 100,

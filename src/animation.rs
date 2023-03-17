@@ -1,22 +1,26 @@
 use bevy::prelude::*;
-use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
 
-#[derive(Component)]
-pub struct AnimationSpriteSheet<T, U> {
-    pub current_animation: U,  // U should be an enum of all the animations
+#[derive(Component, Default)]
+pub struct AnimationSpriteSheet<T> {
+    pub current_animation: T,  // T should be an enum of all the animations
 
     pub row_length: usize,
-    pub animations: T,  // T should be a HashMap<U, benimator::Animation>
     pub state: benimator::State,
     pub locked: bool,
 }
 
+pub trait AnimationSpriteSheetTrait<T> {
+    fn set_animation(&mut self, animation: T);
+    fn update_state(&mut self, animation: benimator::Animation, duration: Duration);
+    fn get_animation(anim_enum: &T) -> benimator::Animation;
+}
+
 /// AnimationSpriteSheet should always have T as HashMap<U, benimator::Animation>
 /// U should be an enum of all the animations
-impl<U: Eq + Hash> AnimationSpriteSheet<HashMap<U, benimator::Animation>, U> {
-    pub fn set_animation(&mut self, animation: U) {
+impl<T: Default + Eq + Hash> AnimationSpriteSheetTrait<T> for AnimationSpriteSheet<T> {
+    fn set_animation(&mut self, animation: T) {
         if self.current_animation == animation {
             return;
         }
@@ -25,12 +29,12 @@ impl<U: Eq + Hash> AnimationSpriteSheet<HashMap<U, benimator::Animation>, U> {
         self.state.reset();
     }
 
-    pub fn get_animation(&self) -> &benimator::Animation {
-        self.animations.get(&self.current_animation).unwrap()
+    /// Update the animation state
+    fn update_state(&mut self, animation: benimator::Animation, duration: Duration) {
+        self.state.update(&animation, duration);
     }
 
-    /// Update the animation state
-    pub fn update_state(&mut self, duration: Duration) {
-        self.state.update(&self.get_animation().clone(), duration);
+    fn get_animation(_: &T) -> benimator::Animation {
+        unimplemented!()
     }
 }
