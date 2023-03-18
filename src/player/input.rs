@@ -68,13 +68,14 @@ pub fn character_controller_system(
         }
 
         if character.dashing {
+            // If it's not locked anymore, then the animation finished
             if !sprite_sheet.locked {
                 character.dashing = false;
                 println!("End dashing!");
             } else {
                 let move_direction = character.last_move_direction.normalize_or_zero();
 
-                let dash_speed = character.speed * 2.25;
+                let dash_speed = character.speed * 2.0;
                 transform.translation +=
                     move_direction.extend(0.0) * dash_speed * time.delta_seconds();
             }
@@ -86,6 +87,7 @@ pub fn character_controller_system(
             println!("Start attacking!");
             sprite_sheet.set_animation(PlayerAnimation::Attack1);
         } else if character.attacking && !sprite_sheet.locked {
+            // If it's not locked anymore, then the animation finished
             character.attacking = false;
             println!("End attacking!");
         }
@@ -97,11 +99,12 @@ pub fn input_handling_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut input_state: ResMut<InputState>,
     mut query: Query<(
+        &CharacterState,
         &mut AnimationSpriteSheet<PlayerAnimation>,
         &mut TextureAtlasSprite,
     )>,
 ) {
-    for (mut sprite_sheet, mut sprite) in query.iter_mut() {
+    for (character, mut sprite_sheet, mut sprite) in query.iter_mut() {
         sprite_sheet.update_state(time.delta());
         sprite.index = sprite_sheet.state.frame_index();
 
@@ -113,6 +116,12 @@ pub fn input_handling_system(
                 // This is needed otherwise the animation will be stuck on the last frame
                 sprite_sheet.state.reset();
             } else {
+                if character.attacking {
+                    println!("Attacking!");
+                } else if character.dashing {
+                    println!("Dashing!");
+                }
+
                 return;
             }
         }

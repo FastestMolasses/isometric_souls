@@ -1,7 +1,4 @@
-use crate::animation::{
-    sprite::{AnimationLookup, AnimationSpriteSheet},
-    Animation, FrameRate,
-};
+use crate::animation::{sprite::AnimationLookup, Animation, FrameRate};
 use crate::util::Direction;
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -40,7 +37,7 @@ impl AnimationLookup<PlayerAnimation> for PlayerAnimation {
                 Animation::from_indices(80..=89, FrameRate::from_fps(12.0)).once()
             }
             PlayerAnimation::Dash => {
-                Animation::from_indices(80..=89, FrameRate::from_fps(26.0)).once()
+                Animation::from_indices(80..=89, FrameRate::from_fps(30.0)).once()
             }
             PlayerAnimation::Attack1 => {
                 Animation::from_indices(90..=95, FrameRate::from_fps(18.0)).once()
