@@ -48,6 +48,7 @@ fn setup(
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
         ..Default::default()
     });
+    // Spawn the player
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: direction_atlas_handles

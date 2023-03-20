@@ -6,6 +6,7 @@ use std::time::Duration;
 #[derive(Component, Default)]
 pub struct AnimationSpriteSheet<T> {
     pub current_animation: T, // T should be an enum of all the animations
+    pub queued_animation: Option<T>,
 
     pub locked: bool,
     pub column_count: usize,
@@ -16,8 +17,7 @@ pub trait AnimationLookup<T> {
     fn get_animation(anim_enum: &T) -> animation::Animation;
 }
 
-/// AnimationSpriteSheet should always have T as HashMap<U, animation::Animation>
-/// U should be an enum of all the animations
+/// AnimationSpriteSheet should always have T as an enum of all the animations
 impl<T: Default + Eq + Copy + Hash + AnimationLookup<T>> AnimationSpriteSheet<T> {
     pub fn set_animation(&mut self, animation: T) {
         if self.current_animation == animation || self.locked {

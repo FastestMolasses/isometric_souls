@@ -40,13 +40,13 @@ impl AnimationLookup<PlayerAnimation> for PlayerAnimation {
                 Animation::from_indices(80..=89, FrameRate::from_fps(30.0)).once()
             }
             PlayerAnimation::Attack1 => {
-                Animation::from_indices(90..=95, FrameRate::from_fps(18.0)).once()
+                Animation::from_indices(90..=95, FrameRate::from_fps(12.0)).once()
             }
             PlayerAnimation::Attack2 => {
-                Animation::from_indices(100..=108, FrameRate::from_fps(18.0)).once()
+                Animation::from_indices(100..=108, FrameRate::from_fps(24.0)).once()
             }
             PlayerAnimation::Attack3 => {
-                Animation::from_indices(110..=116, FrameRate::from_fps(18.0)).once()
+                Animation::from_indices(110..=116, FrameRate::from_fps(24.0)).once()
             }
         }
     }

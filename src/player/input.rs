@@ -38,7 +38,7 @@ pub fn character_controller_system(
     for (mut character, mut sprite_sheet, mut transform, mut atlas, mut sprite) in query.iter_mut()
     {
         // 8-directional movement
-        if !character.dashing && !character.attacking{
+        if !character.dashing && !character.attacking {
             if input_state.move_direction != Vec2::ZERO {
                 let move_direction = input_state.move_direction.normalize();
                 transform.translation +=
@@ -86,6 +86,21 @@ pub fn character_controller_system(
             character.attacking = true;
             println!("Start attacking!");
             sprite_sheet.set_animation(PlayerAnimation::Attack1);
+        } else if input_state.attack
+            && character.attacking
+            && sprite_sheet.queued_animation.is_none()
+        {
+            // If the player is already attacking, then queue up the next attack
+            println!("Queued attack!");
+
+            // Chain attacks together if pressed while the player is still attacking
+            if sprite_sheet.current_animation == PlayerAnimation::Attack1 {
+                sprite_sheet.queued_animation = Some(PlayerAnimation::Attack2);
+            } else if sprite_sheet.current_animation == PlayerAnimation::Attack2 {
+                sprite_sheet.queued_animation = Some(PlayerAnimation::Attack3);
+            } else if sprite_sheet.current_animation == PlayerAnimation::Attack3 {
+                sprite_sheet.queued_animation = Some(PlayerAnimation::Attack1);
+            }
         } else if character.attacking && !sprite_sheet.locked {
             // If it's not locked anymore, then the animation finished
             character.attacking = false;
@@ -108,13 +123,23 @@ pub fn input_handling_system(
         sprite_sheet.update_state(time.delta());
         sprite.index = sprite_sheet.state.frame_index();
 
+        // Get the attack input state regardless if the animation is locked or not
+        input_state.attack = keyboard_input.just_pressed(KeyCode::Space);
+
         // If the animation is locked, don't change it until it's done
         if sprite_sheet.locked {
             if sprite_sheet.state.is_ended() {
                 println!("Animation ended! Unlocking...");
                 sprite_sheet.locked = false;
-                // This is needed otherwise the animation will be stuck on the last frame
-                sprite_sheet.state.reset();
+
+                if sprite_sheet.queued_animation.is_some() {
+                    let queued_animation = sprite_sheet.queued_animation.unwrap();
+                    sprite_sheet.set_animation(queued_animation);
+                    sprite_sheet.queued_animation = None;
+                } else {
+                    // This is needed otherwise the animation will be stuck on the last frame
+                    sprite_sheet.state.reset();
+                }
             } else {
                 if character.attacking {
                     println!("Attacking!");
@@ -148,7 +173,6 @@ pub fn input_handling_system(
         }
 
         input_state.move_direction = move_direction;
-        input_state.attack = keyboard_input.just_pressed(KeyCode::Space);
         input_state.dash = keyboard_input.just_pressed(KeyCode::LShift);
     }
 }
